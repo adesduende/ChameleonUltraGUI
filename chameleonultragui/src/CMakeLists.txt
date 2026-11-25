@@ -105,7 +105,23 @@ if (WIN32)
           GIT_REPOSITORY "https://github.com/GerHobbelt/pthread-win32"
           EXCLUDE_FROM_ALL
   )
+
+  # pthread-win32's own CMakeLists.txt defines install() rules (it uses
+  # GNUInstallDirs/CMakePackageConfigHelpers to build its own install
+  # package). Those rules get pulled into our build's global "install"
+  # target via add_subdirectory(), and fail there (the flutter tool runs
+  # `cmake --install` on Windows as part of `flutter run`/`flutter build`),
+  # since pthread-win32 was never meant to be installed as part of this
+  # project. CMAKE_SKIP_INSTALL_RULES (CMake >= 3.27) disables install()
+  # rule generation for this directory and below, so it only suppresses
+  # pthread-win32's rules, not ours.
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
+    set(CMAKE_SKIP_INSTALL_RULES ON)
+  endif()
   FetchContent_MakeAvailable(pthreads4w)
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
+    set(CMAKE_SKIP_INSTALL_RULES OFF)
+  endif()
 endif (WIN32)
 
 if(ANDROID)
