@@ -97,9 +97,11 @@ class ReadCardPageState extends State<ReadCardPage> {
 
   bool isContinuousHFScan = false;
   bool isContinuousLFScan = false;
+  bool isFastSweepHFScan = false;
   bool scanInProgress = false;
   Timer? hfScanTimer;
   Timer? lfScanTimer;
+  bool _fastSweepCancelled = false;
 
   void updateMifareClassicRecovery() {
     setState(() {
@@ -197,6 +199,87 @@ class ReadCardPageState extends State<ReadCardPage> {
           isContinuousHFScan = false;
         });
       }
+    }
+  }
+
+  // Tiny/weak-antenna tags (common in toys, figurines, etc.) often only
+  // couple with the reader's field for a brief instant while being moved
+  // around by hand. A 2s-interval scan (startContinuousHFScan) can easily
+  // miss that window. This instead hammers the lightweight UID-only scan
+  // as fast as the link allows, so sweeping the tag over the device is
+  // much more likely to catch the moment it answers. Once any UID is seen,
+  // it stops and runs the full identification once.
+  Future<void> startFastSweepHFScan() async {
+    if (isFastSweepHFScan) return;
+
+    var appState = Provider.of<ChameleonGUIState>(context, listen: false);
+
+    setState(() {
+      isFastSweepHFScan = true;
+    });
+    _fastSweepCancelled = false;
+
+    const maxDuration = Duration(minutes: 2);
+    const minDelayBetweenAttempts = Duration(milliseconds: 150);
+    final startTime = DateTime.now();
+
+    try {
+      if (!await appState.communicator!.isReaderDeviceMode()) {
+        await appState.communicator!.setReaderDeviceMode(true);
+      }
+    } catch (_) {
+      // Fall through; scan attempts below will surface any real error.
+    }
+
+    CardData? found;
+
+    while (!_fastSweepCancelled &&
+        mounted &&
+        DateTime.now().difference(startTime) < maxDuration) {
+      final attemptStart = DateTime.now();
+      try {
+        found = await appState.communicator!.scan14443aTag();
+      } catch (_) {
+        found = null;
+      }
+
+      if (found != null && found.uid.isNotEmpty) {
+        break;
+      }
+
+      final elapsed = DateTime.now().difference(attemptStart);
+      final wait = minDelayBetweenAttempts - elapsed;
+      if (wait > Duration.zero) {
+        await asyncSleep(wait.inMilliseconds);
+      }
+    }
+
+    if (!mounted) return;
+
+    if (found != null && found.uid.isNotEmpty && context.mounted) {
+      // Got a hit: run the normal (slower) identification pass once so the
+      // rest of the page (Mifare Classic/Ultralight detection, etc.) works
+      // exactly as with a regular scan.
+      var info = await readHFInfo(context, updateMifareClassicRecovery);
+      setState(() {
+        hfInfo = info.$1;
+        mfcInfo = info.$2;
+        mfuInfo = info.$3;
+        isFastSweepHFScan = false;
+      });
+    } else {
+      setState(() {
+        isFastSweepHFScan = false;
+      });
+    }
+  }
+
+  void stopFastSweepHFScan() {
+    _fastSweepCancelled = true;
+    if (mounted) {
+      setState(() {
+        isFastSweepHFScan = false;
+      });
     }
   }
 

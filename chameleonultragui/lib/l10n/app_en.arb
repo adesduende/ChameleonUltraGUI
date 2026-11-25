@@ -361,6 +361,8 @@
   "view_passwords": "View passwords",
   "detected_passwords": "Detected passwords",
   "continuous_scan": "Continuous scan",
+  "fast_sweep_scan": "Fast sweep (weak tags)",
+  "fast_sweep_scan_hint": "Rapidly re-scans for a UID (every ~150ms) while you slowly move a weak/small-antenna tag across the device. Stops as soon as a tag is detected.",
   "trademarks_hid": "HID\u2122 and HID ProxCard\u2122 are registered trademarks of HID Global Corporation",
   "licenses": "Licenses",
   "changelog": "Changelog",
