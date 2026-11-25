@@ -114,22 +114,29 @@ if (WIN32)
   # since pthread-win32 was never meant to be installed as part of this
   # project.
   #
-  # CMAKE_SKIP_INSTALL_RULES only exists from CMake >= 3.27, and the CMake
-  # actually driving this build on Windows is whichever one the active
-  # generator/toolchain bundles (e.g. the one shipped inside Visual Studio
-  # 2019/2022 Build Tools), which can be considerably older than whatever
-  # "cmake --version" on PATH reports -- so it alone isn't reliable here.
-  # Shadowing the install() command itself with a no-op function works on
-  # every CMake version: the override only applies to this directory scope
-  # and whatever add_subdirectory() pulls in below it (pthread-win32), not
-  # to the parent scope where our own app's install() rules are defined
-  # (windows/CMakeLists.txt).
+  # We suppress just those rules by shadowing install() with a flag-gated
+  # wrapper, defined exactly ONCE. Unlike variables, function()/macro()
+  # definitions in CMake are NOT directory-scoped -- once install() is
+  # redefined, that definition applies for the rest of configure, in every
+  # directory processed afterwards (including back up in the parent scope,
+  # windows/CMakeLists.txt's own legitimate install() calls, once
+  # add_subdirectory() returns here). So we must not shadow it a second
+  # time (CMake's auto-generated `_install` alias would then capture the
+  # no-op version instead of the real command) -- a single definition that
+  # consults a variable (which IS directory-scoped, so it reverts on its
+  # own once this if(WIN32) block's directory scope is left) is what
+  # actually isolates this to pthread-win32 alone.
+  set(_cugui_suppress_install TRUE)
   function(install)
+    if(_cugui_suppress_install)
+      return()
+    endif()
+    _install(${ARGN})
   endfunction()
-  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
-    set(CMAKE_SKIP_INSTALL_RULES ON)
-  endif()
+
   FetchContent_MakeAvailable(pthreads4w)
+
+  set(_cugui_suppress_install FALSE)
 endif (WIN32)
 
 if(ANDROID)
