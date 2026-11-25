@@ -89,14 +89,23 @@ if (WIN32)
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   )
 
+  # NOTE: We intentionally do NOT use find_package()'s OVERRIDE_FIND_PACKAGE
+  # redirect here. That mechanism is version-sensitive across CMake releases
+  # (it has been observed to silently fail to redirect on some CMake 4.x
+  # installs, falling through to a normal find_package() search that then
+  # errors with "Could not find a package configuration file ..." since
+  # pthreads4w is never actually installed on the system). Populating the
+  # dependency directly with FetchContent_MakeAvailable() and relying on the
+  # pthreads4w::pthreadVC3 ALIAS target that pthread-win32's own
+  # CMakeLists.txt defines is equivalent for our purposes and works
+  # consistently from CMake 3.14 through at least CMake 4.x.
   include(FetchContent)
   FetchContent_Declare(
           pthreads4w
           GIT_REPOSITORY "https://github.com/GerHobbelt/pthread-win32"
-          OVERRIDE_FIND_PACKAGE
           EXCLUDE_FROM_ALL
   )
-  find_package(pthreads4w CONFIG REQUIRED)
+  FetchContent_MakeAvailable(pthreads4w)
 endif (WIN32)
 
 if(ANDROID)
