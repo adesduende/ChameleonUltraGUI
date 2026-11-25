@@ -112,16 +112,24 @@ if (WIN32)
   # target via add_subdirectory(), and fail there (the flutter tool runs
   # `cmake --install` on Windows as part of `flutter run`/`flutter build`),
   # since pthread-win32 was never meant to be installed as part of this
-  # project. CMAKE_SKIP_INSTALL_RULES (CMake >= 3.27) disables install()
-  # rule generation for this directory and below, so it only suppresses
-  # pthread-win32's rules, not ours.
+  # project.
+  #
+  # CMAKE_SKIP_INSTALL_RULES only exists from CMake >= 3.27, and the CMake
+  # actually driving this build on Windows is whichever one the active
+  # generator/toolchain bundles (e.g. the one shipped inside Visual Studio
+  # 2019/2022 Build Tools), which can be considerably older than whatever
+  # "cmake --version" on PATH reports -- so it alone isn't reliable here.
+  # Shadowing the install() command itself with a no-op function works on
+  # every CMake version: the override only applies to this directory scope
+  # and whatever add_subdirectory() pulls in below it (pthread-win32), not
+  # to the parent scope where our own app's install() rules are defined
+  # (windows/CMakeLists.txt).
+  function(install)
+  endfunction()
   if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
     set(CMAKE_SKIP_INSTALL_RULES ON)
   endif()
   FetchContent_MakeAvailable(pthreads4w)
-  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
-    set(CMAKE_SKIP_INSTALL_RULES OFF)
-  endif()
 endif (WIN32)
 
 if(ANDROID)
