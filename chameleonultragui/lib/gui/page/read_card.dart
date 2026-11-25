@@ -330,6 +330,7 @@ class ReadCardPageState extends State<ReadCardPage> {
   @override
   void dispose() {
     stopContinuousHFScan();
+    stopFastSweepHFScan();
     stopContinuousLFScan();
     super.dispose();
   }
@@ -659,6 +660,53 @@ class ReadCardPageState extends State<ReadCardPage> {
                                         : localizations.continuous_scan),
                                   ),
                                 ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: isFastSweepHFScan
+                                        ? () => stopFastSweepHFScan()
+                                        : () async {
+                                            if (appState.connector!.device ==
+                                                ChameleonDevice.ultra) {
+                                              await startFastSweepHFScan();
+                                            } else if (appState
+                                                    .connector!.device ==
+                                                ChameleonDevice.lite) {
+                                              showDialog<String>(
+                                                context: context,
+                                                builder:
+                                                    (BuildContext context) =>
+                                                        AlertDialog(
+                                                  title: Text(localizations
+                                                      .no_supported),
+                                                  content: Text(
+                                                      localizations
+                                                          .lite_no_read,
+                                                      style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold)),
+                                                  actions: <Widget>[
+                                                    TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(context,
+                                                              localizations.ok),
+                                                      child: Text(
+                                                          localizations.ok),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            } else {
+                                              appState.changesMade();
+                                            }
+                                          },
+                                    style: customCardButtonStyle(appState),
+                                    child: Text(isFastSweepHFScan
+                                        ? localizations.cancel
+                                        : localizations.fast_sweep_scan),
+                                  ),
+                                ),
                               ],
                             )
                           : Row(
@@ -749,6 +797,52 @@ class ReadCardPageState extends State<ReadCardPage> {
                                     child: Text(isContinuousHFScan
                                         ? localizations.cancel
                                         : localizations.continuous_scan),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: isFastSweepHFScan
+                                        ? () => stopFastSweepHFScan()
+                                        : () async {
+                                            if (appState.connector!.device ==
+                                                ChameleonDevice.ultra) {
+                                              await startFastSweepHFScan();
+                                            } else if (appState
+                                                    .connector!.device ==
+                                                ChameleonDevice.lite) {
+                                              showDialog<String>(
+                                                context: context,
+                                                builder:
+                                                    (BuildContext context) =>
+                                                        AlertDialog(
+                                                  title: Text(localizations
+                                                      .no_supported),
+                                                  content: Text(
+                                                      localizations
+                                                          .lite_no_read,
+                                                      style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold)),
+                                                  actions: <Widget>[
+                                                    TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(context,
+                                                              localizations.ok),
+                                                      child: Text(
+                                                          localizations.ok),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            } else {
+                                              appState.changesMade();
+                                            }
+                                          },
+                                    style: customCardButtonStyle(appState),
+                                    child: Text(isFastSweepHFScan
+                                        ? localizations.cancel
+                                        : localizations.fast_sweep_scan),
                                   ),
                                 ),
                               ],
